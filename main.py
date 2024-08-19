@@ -22,14 +22,18 @@ player_runR = True
 player_runU = True
 player_runD = True
 running = True
-
+level_number = 0
 # enter_by_levelx = []
 # enter_by_levely = []
 
 quit_by_levelx = []
 quit_by_levely = []
 
-blocks = pygame.sprite.Group()
+# blocks = pygame.sprite.Group()
+blocks_by_level = []
+
+for i in levels.all_levels:
+    blocks_by_level.append(pygame.sprite.Group())
 
 class Player(pygame.sprite.Sprite):
     def __init__(self):
@@ -44,6 +48,8 @@ class Player(pygame.sprite.Sprite):
         self.speedy = 0
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_LEFT] and player_runL == True:
+            print("LEFT")
+            print(self.rect.x, " : ", self.rect.y)
             self.speedx = -speed
         if keystate[pygame.K_RIGHT] and player_runR == True:
             self.speedx = speed
@@ -58,7 +64,7 @@ class Player(pygame.sprite.Sprite):
         player1.rect.y = self.rect.y + self.speedy
 
 
-        hitLocal = pygame.sprite.spritecollide(player1, blocks, False)
+        hitLocal = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
         if hitLocal:
             return
 
@@ -146,7 +152,7 @@ for i in range(len(all_sprites_by_level)):
                 if col == "-":
                     pf = Block(x,y)
                     all_sprites_by_level[i].add(pf)
-                    blocks.add(pf)
+                    blocks_by_level[i].add(pf)
 
                 if col == "E":
                     ef = Enter(x, y)
@@ -178,15 +184,24 @@ while running:
             running = False
 
     # Обновление
-    all_sprites_by_level[0].update()
-    last = len(all_sprites_by_level[0].sprites()) - 1
-    if all_sprites_by_level[0].sprites()[last].rect.x == quit_by_levelx[0] and all_sprites_by_level[0].sprites()[last].rect.y == quit_by_levely[0]:
-        running = False  # Переход на новый уровень
+    all_sprites_by_level[level_number].update()
+
+    player_idx = len(all_sprites_by_level[level_number].sprites()) - 1
+    if (all_sprites_by_level[level_number].sprites()[player_idx].rect.x == quit_by_levelx[level_number] and
+            all_sprites_by_level[level_number].sprites()[player_idx].rect.y == quit_by_levely[level_number]):
+        # all_sprites_by_level[level_number].remove()
+
+        if level_number == len(levels.all_levels) - 1:
+            running = False
+        # level_number = level_number + 1
+        level_number += 1
+
+        #running = False  # Переход на новый уровень
         # all_sprites.empty()
 
     # Рендеринг
     screen.fill(LITE_BLUE)
-    all_sprites_by_level[0].draw(screen)
+    all_sprites_by_level[level_number].draw(screen)
     # После отрисовки всего, переворачиваем экран
     pygame.display.flip()
 
