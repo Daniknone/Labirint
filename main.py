@@ -2,6 +2,7 @@ from time import sleep
 
 import pygame
 import levels
+import time
 
 WIDTH = 1024 - 64
 HEIGHT = 1024 - 64
@@ -14,23 +15,23 @@ BLACK = (0, 0, 0)
 RED = (255, 0, 0)
 GREEN = (0, 255, 0)
 BLUE = (0, 0, 255)
+GRAY = (128,128,128)
 
 speed = 8
 
-player_runL = True
-player_runR = True
-player_runU = True
-player_runD = True
+
 running = True
 level_number = 0
-# enter_by_levelx = []
-# enter_by_levely = []
 
 quit_by_levelx = []
 quit_by_levely = []
 
-# blocks = pygame.sprite.Group()
 blocks_by_level = []
+cannon_by_level = [[]]
+
+screen = pygame.display.set_mode((WIDTH, HEIGHT))
+
+bullet_image = pygame.image.load("bullet.png")
 
 for i in levels.all_levels:
     blocks_by_level.append(pygame.sprite.Group())
@@ -47,15 +48,13 @@ class Player(pygame.sprite.Sprite):
         self.speedx = 0
         self.speedy = 0
         keystate = pygame.key.get_pressed()
-        if keystate[pygame.K_LEFT] and player_runL == True:
-            print("LEFT")
-            print(self.rect.x, " : ", self.rect.y)
+        if keystate[pygame.K_LEFT] or keystate[pygame.K_a]:
             self.speedx = -speed
-        if keystate[pygame.K_RIGHT] and player_runR == True:
+        if keystate[pygame.K_RIGHT] or keystate[pygame.K_d]:
             self.speedx = speed
-        if keystate[pygame.K_UP] and player_runU == True:
+        if keystate[pygame.K_UP] or keystate[pygame.K_w]:
             self.speedy = -speed
-        if keystate[pygame.K_DOWN] and player_runD == True:
+        if keystate[pygame.K_DOWN] or keystate[pygame.K_s]:
             self.speedy = speed
 
         player1 = Player()
@@ -80,7 +79,38 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.rect.top = 0
 
+class Bullet(pygame.sprite.Sprite):
+    def __init__(self,x,y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((32,32))
+        self.image = bullet_image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
 
+    def draw(self, screen1):
+        screen1.blit(self.image, self.rect)
+
+class Cannon(pygame.sprite.Sprite):
+    bullet = Bullet(0, 0)
+    angle = 0
+
+    def __init__(self,x,y,angle1):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((32, 32))
+        self.image = cannon_image
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedx = 0
+        self.speedy = 0
+        self.image = pygame.transform.rotate(self.image,angle1)
+        self.angle = angle1
+
+    def draw(self, screen1):
+        self.bullet = Bullet(self.rect.x, self.rect.y)
+        self.bullet.image = pygame.transform.rotate(self.bullet.image,self.angle)
+        self.bullet.draw(screen)
 
 class Block(pygame.sprite.Sprite):
     def __init__(self,x,y):
@@ -115,26 +145,30 @@ class Qiut(pygame.sprite.Sprite):
         self.speedx = 0
         self.speedy = 0
 
+
 # Создаем игру и окно
 pygame.init()
+print("init")
+
 
 Enter_img = pygame.image.load("l0_sprite_1.png")
 Qiut_img = pygame.image.load("l0_sprite_2.png")
 player_img = pygame.image.load("New Piskel (8).png")
 Block_img = pygame.image.load("New Piskel (6).png")
+cannon_image = pygame.image.load("cannon.png")
 
 pygame.mixer.init()
-screen = pygame.display.set_mode((WIDTH, HEIGHT))
 pygame.display.set_caption("My Game")
 clock = pygame.time.Clock()
-# all_sprites = pygame.sprite.Group()
 
 all_sprites_by_level = []
 for i in levels.all_levels:
     all_sprites_by_level.append(pygame.sprite.Group())
+    cannon_by_level.append([])
 
 PLATFORM_WIDTH = 32
 PLATFORM_HEIGHT = 32
+
 
 for i in range(len(all_sprites_by_level)):
     player = Player()
@@ -164,7 +198,26 @@ for i in range(len(all_sprites_by_level)):
                     quit_by_levelx.append(x)
                     quit_by_levely.append(y)
                     all_sprites_by_level[i].add(ef)
-
+                if col == "↓":
+                    cn = Cannon(x,y,180)
+                    all_sprites_by_level[i].add(cn)
+                    blocks_by_level[i].add(cn)
+                    cannon_by_level[i].append(cn)
+                if col == "↑":
+                    cn = Cannon(x,y,0)
+                    all_sprites_by_level[i].add(cn)
+                    blocks_by_level[i].add(cn)
+                    cannon_by_level[i].append(cn)
+                if col == "←":
+                    cn = Cannon(x,y,90)
+                    all_sprites_by_level[i].add(cn)
+                    blocks_by_level[i].add(cn)
+                    cannon_by_level[i].append(cn)
+                if col == "→":
+                    cn = Cannon(x,y,-90)
+                    all_sprites_by_level[i].add(cn)
+                    blocks_by_level[i].add(cn)
+                    cannon_by_level[i].append(cn)
 
                 x += PLATFORM_WIDTH  # блоки платформы ставятся на ширине блоков
             y += PLATFORM_HEIGHT     # то же самое и с высотой
@@ -200,9 +253,15 @@ while running:
         # all_sprites.empty()
 
     # Рендеринг
-    screen.fill(LITE_BLUE)
+    screen.fill(GRAY)
     all_sprites_by_level[level_number].draw(screen)
+
+    for cn in cannon_by_level[level_number]:
+        cn.draw(screen)
     # После отрисовки всего, переворачиваем экран
+
+    # bullet = Bullet(23, 23)
+    # bullet.draw(screen)
     pygame.display.flip()
 
 pygame.quit()
