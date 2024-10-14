@@ -18,7 +18,9 @@ BLUE = (0, 0, 255)
 GRAY = (128,128,128)
 
 speed = 8
-
+bulet_start = 32
+bullet_speed = 9
+bullet_spawn_time = 1
 
 running = True
 level_number = 0
@@ -44,31 +46,83 @@ class Player(pygame.sprite.Sprite):
         self.rect = self.image.get_rect()
 
     def update(self):
-
         self.speedx = 0
         self.speedy = 0
+
         keystate = pygame.key.get_pressed()
-        if keystate[pygame.K_LEFT] or keystate[pygame.K_a]:
-            self.speedx = -speed
-        if keystate[pygame.K_RIGHT] or keystate[pygame.K_d]:
-            self.speedx = speed
         if keystate[pygame.K_UP] or keystate[pygame.K_w]:
-            self.speedy = -speed
+            if keystate[pygame.K_DOWN] or keystate[pygame.K_s]:
+                self.speedy = 0
+            elif keystate[pygame.K_UP] or keystate[pygame.K_d]:
+                self.speedy = -speed
+                self.speedx = speed
+            elif keystate[pygame.K_UP] or keystate[pygame.K_a]:
+                self.speedy = -speed
+                self.speedx = -speed
+            else:
+                self.speedy = -speed
         if keystate[pygame.K_DOWN] or keystate[pygame.K_s]:
-            self.speedy = speed
+            if keystate[pygame.K_UP] or keystate[pygame.K_w]:
+                self.speedy = 0
+            elif keystate[pygame.K_UP] or keystate[pygame.K_d]:
+                self.speedy = speed
+                self.speedx = speed
+            elif keystate[pygame.K_UP] or keystate[pygame.K_a]:
+                self.speedy = speed
+                self.speedx = -speed
+            else:
+                self.speedy = speed
+        if keystate[pygame.K_RIGHT] or keystate[pygame.K_d]:
+            if keystate[pygame.K_UP] or keystate[pygame.K_a]:
+                self.speedx = 0
+            elif keystate[pygame.K_UP] or keystate[pygame.K_s]:
+                self.speedy = speed
+                self.speedx = speed
+            elif keystate[pygame.K_UP] or keystate[pygame.K_w]:
+                self.speedy = -speed
+                self.speedx = speed
+            else:
+                self.speedx = speed
+        if keystate[pygame.K_LEFT ] or keystate[pygame.K_a]:
+            if keystate[pygame.K_UP] or keystate[pygame.K_d]:
+                self.speedx = 0
+            elif keystate[pygame.K_UP] or keystate[pygame.K_s]:
+                self.speedy = speed
+                self.speedx = -speed
+            elif keystate[pygame.K_UP] or keystate[pygame.K_w]:
+                self.speedy = -speed
+                self.speedx = -speed
+            else:
+                self.speedx = -speed
 
         player1 = Player()
-        player1.image = pygame.Surface((32,32))
+        player1.image = pygame.Surface((32, 32))
+
         player1.rect.x = self.rect.x + self.speedx
+        player1.rect.y = self.rect.y
+
+        hitLocalx = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
+        if hitLocalx:
+            print("hit x")
+            if self.speedx != 0 and self.speedy != 0:
+                self.speedx = 0
+            else:
+                return
+
+        player1.rect.x = self.rect.x
         player1.rect.y = self.rect.y + self.speedy
 
+        hitLocaly = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
+        if hitLocaly:
+            print("hit y")
+            if self.speedx != 0 and self.speedy != 0:
+                self.speedy = 0
+            else:
+                return
 
-        hitLocal = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
-        if hitLocal:
-            return
+        self.rect.x = self.rect.x + self.speedx
+        self.rect.y = self.rect.y + self.speedy
 
-        self.rect.x += self.speedx
-        self.rect.y += self.speedy
 
         if self.rect.right > WIDTH:
             self.rect.right = WIDTH
@@ -79,38 +133,92 @@ class Player(pygame.sprite.Sprite):
         if self.rect.top < 0:
             self.rect.top = 0
 
+
 class Bullet(pygame.sprite.Sprite):
-    def __init__(self,x,y):
-        pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((32,32))
+    def __init__(self, x, y, angle, speed):
+        super().__init__()
+        self.image = pygame.Surface((16,16))
         self.image = bullet_image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
+        self.image = pygame.transform.rotate(self.image, angle)
+        self.speed = speed
+        self.angle = angle
+        self.killed = False
+
+    def update(self):
+        global running
+        if self.angle == 0:
+            self.rect.y -= self.speed
+        elif self.angle == 180:
+            self.rect.y += self.speed
+        elif self.angle == 90:
+            self.rect.x -= self.speed
+        elif self.angle == -90:
+            self.rect.x += self.speed
+
+        if pygame.sprite.spritecollide(self, blocks_by_level[level_number], False):
+            self.killed = True
+
+        player_idx_l = len(all_sprites_by_level[level_number].sprites()) - 1
+        if len(all_sprites_by_level[level_number].sprites()) > 0:
+            if pygame.sprite.collide_rect(self, all_sprites_by_level[level_number].sprites()[player_idx_l]):
+                self.killed = True
+                running = False
 
     def draw(self, screen1):
-        screen1.blit(self.image, self.rect)
+        if not self.killed:
+            screen1.blit(self.image, self.rect)
+
 
 class Cannon(pygame.sprite.Sprite):
-    bullet = Bullet(0, 0)
-    angle = 0
 
-    def __init__(self,x,y,angle1):
+    def __init__(self, x, y, angle):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((32, 32))
         self.image = cannon_image
         self.rect = self.image.get_rect()
         self.rect.x = x
         self.rect.y = y
         self.speedx = 0
         self.speedy = 0
-        self.image = pygame.transform.rotate(self.image,angle1)
-        self.angle = angle1
+        self.image = pygame.transform.rotate(self.image,angle)
+
+        self.startTime = time.time()
+
+        if angle == 0:
+            y -= bulet_start - 24
+            x += 12
+        elif angle == 90:
+            x -= bulet_start - 24
+            y += 12
+        elif angle == 180:
+            y += bulet_start
+            x += 12
+        elif angle == -90:
+            x += bulet_start
+            y += 12
+
+        self.x = x
+        self.y = y
+        self.angle = angle
+        self.bulletSpeed = bullet_speed
+
+        self.bullet = []
+        self.bullet.append(Bullet(x, y, angle, self.bulletSpeed))
 
     def draw(self, screen1):
-        self.bullet = Bullet(self.rect.x, self.rect.y)
-        self.bullet.image = pygame.transform.rotate(self.bullet.image,self.angle)
-        self.bullet.draw(screen)
+        for oneBullet in self.bullet:
+            oneBullet.draw(screen)
+
+    def update(self):
+        if time.time() - self.startTime > bullet_spawn_time:
+            self.startTime = time.time()
+            self.bullet.append(Bullet(self.x, self.y, self.angle, self.bulletSpeed))
+
+
+        for oneBullet in self.bullet:
+            oneBullet.update()
 
 class Block(pygame.sprite.Sprite):
     def __init__(self,x,y):
