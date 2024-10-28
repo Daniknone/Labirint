@@ -27,7 +27,8 @@ level_number = 0
 
 quit_by_levelx = []
 quit_by_levely = []
-
+money_by_levely = []
+money_by_levelx = []
 blocks_by_level = []
 cannon_by_level = [[]]
 
@@ -41,13 +42,27 @@ for i in levels.all_levels:
 class Player(pygame.sprite.Sprite):
     def __init__(self):
         pygame.sprite.Sprite.__init__(self)
-        self.image = pygame.Surface((32,32))
+        self.image = pygame.Surface((32, 32))
         self.image = player_img
         self.rect = self.image.get_rect()
 
+        self.prehitx = 0
+        self.prehity = 0
+
+        self.ignore = False
+
     def update(self):
+
+        # self.rect.x = 64-8
+        # self.rect.y = 320 -8
+        # return
+
         self.speedx = 0
         self.speedy = 0
+
+        prex = self.prehitx
+        prey = self.prehity
+        print("")
 
         keystate = pygame.key.get_pressed()
         if keystate[pygame.K_UP] or keystate[pygame.K_w]:
@@ -83,7 +98,7 @@ class Player(pygame.sprite.Sprite):
                 self.speedx = speed
             else:
                 self.speedx = speed
-        if keystate[pygame.K_LEFT ] or keystate[pygame.K_a]:
+        if keystate[pygame.K_LEFT] or keystate[pygame.K_a]:
             if keystate[pygame.K_UP] or keystate[pygame.K_d]:
                 self.speedx = 0
             elif keystate[pygame.K_UP] or keystate[pygame.K_s]:
@@ -95,8 +110,12 @@ class Player(pygame.sprite.Sprite):
             else:
                 self.speedx = -speed
 
+        if self.speedx != 0 and self.speedy != 0:
+            print("both")
+
         player1 = Player()
-        player1.image = pygame.Surface((32, 32))
+        player1.image = pygame.Surface((24, 24))
+        player1.rect = player1.image.get_rect()
 
         player1.rect.x = self.rect.x + self.speedx
         player1.rect.y = self.rect.y
@@ -104,10 +123,13 @@ class Player(pygame.sprite.Sprite):
         hitLocalx = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
         if hitLocalx:
             print("hit x")
+            self.prehitx = True
             if self.speedx != 0 and self.speedy != 0:
                 self.speedx = 0
             else:
                 return
+        else:
+            self.prehitx = False
 
         player1.rect.x = self.rect.x
         player1.rect.y = self.rect.y + self.speedy
@@ -115,14 +137,29 @@ class Player(pygame.sprite.Sprite):
         hitLocaly = pygame.sprite.spritecollide(player1, blocks_by_level[level_number], False)
         if hitLocaly:
             print("hit y")
+            self.prehity = True
             if self.speedx != 0 and self.speedy != 0:
                 self.speedy = 0
             else:
                 return
+        else:
+            self.prehity = False
 
-        self.rect.x = self.rect.x + self.speedx
-        self.rect.y = self.rect.y + self.speedy
+        if self.speedx == self.speedy or self.speedx == -1*self.speedy:
+            print("mod equal")
+            if prex or prey:
+                print("mod equal after hit")
+                self.ignore = True
+                self.speedx = 0
+                self.speedy = 0
+                return
 
+        if not self.ignore:
+            print("move: speedx: ", self.speedx, " speedy: ", self.speedy, " hitY: ", hitLocaly, " hitx: ", hitLocalx)
+            print(" rect x:", self.rect.x, " rect y:", self.rect.y)
+            self.rect.x = self.rect.x + self.speedx
+            self.rect.y = self.rect.y + self.speedy
+        self.ignore = False
 
         if self.rect.right > WIDTH:
             self.rect.right = WIDTH
@@ -231,6 +268,17 @@ class Block(pygame.sprite.Sprite):
         self.speedx = 0
         self.speedy = 0
 
+
+class Money(pygame.sprite.Sprite):
+    def __init__(self,x,y):
+        pygame.sprite.Sprite.__init__(self)
+        self.image = pygame.Surface((32, 32))
+        self.image = Money_Gif   # [Money_0, Money_1, Money_2, Money_3, Money_4, Money_5]
+        self.rect = self.image.get_rect()
+        self.rect.x = x
+        self.rect.y = y
+        self.speedx = 0
+        self.speedy = 0
 class Enter(pygame.sprite.Sprite):
     def __init__(self,x,y):
         pygame.sprite.Sprite.__init__(self)
@@ -264,7 +312,13 @@ Qiut_img = pygame.image.load("l0_sprite_2.png")
 player_img = pygame.image.load("New Piskel (8).png")
 Block_img = pygame.image.load("New Piskel (6).png")
 cannon_image = pygame.image.load("cannon.png")
-
+Money_0 = pygame.image.load("Money_0.png")
+Money_1 = pygame.image.load("Money_1.png")
+Money_2 = pygame.image.load("Money_2.png")
+Money_3 = pygame.image.load("Money_3.png")
+Money_4 = pygame.image.load("Money_4.png")
+Money_5 = pygame.image.load("Money_5.png")
+Money_Gif = pygame.image.load("Money_Gif.gif")
 pygame.mixer.init()
 pygame.display.set_caption("My Game")
 clock = pygame.time.Clock()
@@ -306,6 +360,11 @@ for i in range(len(all_sprites_by_level)):
                     quit_by_levelx.append(x)
                     quit_by_levely.append(y)
                     all_sprites_by_level[i].add(ef)
+                if col == "M":
+                    mn = Money(x, y)
+                    money_by_levelx.append(x)
+                    money_by_levely.append(y)
+                    all_sprites_by_level[i].add(mn)
                 if col == "↓":
                     cn = Cannon(x,y,180)
                     all_sprites_by_level[i].add(cn)
